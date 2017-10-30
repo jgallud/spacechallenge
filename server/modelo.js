@@ -1,0 +1,189 @@
+function Juego(){
+	this.partidas={};
+	this.nuevaPartida=function(nombre,socket){
+		if (this.partidas[nombre]==null){
+		//	socket.join(nombre);
+			this.partidas[nombre]=new Partida(nombre);
+		}
+		socket.join(nombre);
+	}
+	this.unirme=function(nombre,socket){
+		socket.join(nombre);
+	}
+	this.obtenerPartidas=function(callback){
+		var lista=[];
+		for (var key in this.partidas) {
+		    if (this.partidas[key].estado.esInicial()){
+		    	lista.push(key);
+		    }
+		}
+		callback(lista);
+	}
+}
+
+function Partida(nombre){
+	this.jugadores={};
+	this.nombre=nombre;
+	this.estado=new Inicial();
+	this.veg;//randomInt(0,35);
+	this.x=200;
+	this.socket;
+	this.io;
+	this.coord=[];
+	this.iniciar=function(socket,io){
+		this.socket=socket;
+		this.io=io;
+		this.socket.emit('coord',this.coord);
+	}
+	this.agregarJugador=function(id,socket){
+		this.socket=socket;
+		this.estado.agregarJugador(id,this);
+	}
+	this.puedeAgregarJugador=function(id){		
+		var y=20;
+		this.jugadores[id]=new Jugador(id,this.x,y,this.veg);
+		this.veg++;
+		this.x=600;
+		console.log(this.jugadores);
+		if (Object.keys(this.jugadores).length>=2){
+			this.estado=new Jugar();
+			this.enviarAJugar();
+		}
+		else
+			this.enviarFaltaUno();
+	}
+	this.enviarFaltaUno=function(){
+		//this.socket.emit('faltaUno');
+		this.io.sockets.in(this.nombre).emit('faltaUno');
+	}
+	this.enviarAJugar=function(){
+		//this.socket.broadcast.emit('aJugar',this.jugadores);
+		//this.socket.emit('aJugar',this.jugadores);
+		this.io.sockets.in(this.nombre).emit('aJugar',this.jugadores);
+		this.socket.broadcast.to(this.nombre).emit('aJugar',this.jugadores)
+	}
+	this.enviarFinal=function(idGanador){
+		//this.socket.broadcast.emit('final',idGanador);
+		//this.socket.emit('final',idGanador);
+		this.io.sockets.in(this.nombre).emit('final',idGanador);
+		this.socket.broadcast.to(this.nombre).emit('final',idGanador)	
+	}
+	this.movimiento=function(data,socket){
+		this.socket=socket;
+		this.estado.movimiento(data,this);
+	}
+	this.puedeMover=function(data){
+		if (data.puntos>=10){
+			this.estado=new Final();
+			this.enviarFinal(data.id);
+		}
+		else{
+			//this.socket.broadcast.emit('movimiento',data);
+			this.socket.broadcast.to(this.nombre).emit('movimiento',data)
+		}
+	}
+	this.volverAJugar=function(socket){
+		this.socket=socket;
+		this.estado.volverAJugar(this);
+	}
+	this.reset=function(){
+		this.estado.reset(this);
+	}
+	this.reiniciar=function(){
+		this.jugadores={};
+		this.coord=[];
+		this.x=200;
+		this.ini();
+		this.estado=new Inicial();
+		this.io.sockets.in(this.nombre).emit('reset',this.coord);
+		this.socket.broadcast.to(this.nombre).emit('reset',this.coord)
+		//this.socket.broadcast.emit('reset',this.coord);
+        //this.socket.emit('reset',this.coord);
+	
+	}
+	this.ini=function(){
+		this.veg=randomInt(0,24);
+		var otra=this.veg+1;
+
+		//console.log(this.veg,"--",otra);
+		for(var i=0;i<10;i++){
+			this.coord.push({'veg':this.veg,'x':randomInt(10,720),'y':randomInt(25,520)});
+		}
+		for(var i=0;i<10;i++){
+			this.coord.push({'veg':otra,'x':randomInt(10,720),'y':randomInt(25,520)});
+		}
+		var alea;
+		for(var i=0;i<30;i++){
+			do {
+				alea=randomInt(0,25);
+			}while(alea==this.veg || alea==otra)
+			this.coord.push({'veg':alea,'x':randomInt(10,720),'y':randomInt(25,520)});
+		}
+	}
+	this.ini();
+}
+
+function Inicial(){
+	this.esInicial=function(){
+		return true;
+	}
+	this.agregarJugador=function(id,juego){
+		juego.puedeAgregarJugador(id);
+	}
+	this.movimiento=function(data,juego){
+		console.log('No se admiten movimientos')
+	}
+	this.reset=function(){
+		console.log('Reset en estaod Inicial');
+	}
+	this.volverAJugar=function(juego){
+		juego.reiniciar();
+	}
+}
+
+function Jugar(){
+	this.esInicial=function(){
+		return false;
+	}
+	this.agregarJugador=function(id,juego){
+		console.log('No se puede agregar nuevo jugador');
+	}
+	this.movimiento=function(data,juego){
+		juego.puedeMover(data);
+	}
+	this.reset=function(juego){
+		juego.reiniciar();
+	}
+	this.volverAJugar=function(juego){
+		juego.reiniciar();
+	}
+}
+
+function Final(){
+	this.esInicial=function(){
+		return false;
+	}
+	this.agregarJugador=function(juego){
+		console.log('No se puede agregar nuevo jugador');
+	}	
+	this.movimiento=function(data,juego){
+		console.log('No se admiten movimientos')
+	}
+	this.volverAJugar=function(juego){
+		juego.reiniciar();
+	}
+}
+
+function Jugador(id,x,y,veg){
+	this.id=id;
+    this.x=x;//randomInt(100,400),
+	this.y=y;//randomInt(100,400),
+    this.veg=veg;
+}
+
+function randomInt(low, high){
+   	return Math.floor(Math.random() * (high - low) + low);
+}
+
+module.exports.Juego=Juego;
+module.exports.Partida=Partida;

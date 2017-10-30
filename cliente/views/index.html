@@ -1,0 +1,56 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>SpaceChallenge</title>
+    <script src="cliente/lib/phaser.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="cliente/lib/jquery.cookie.js"></script>
+    <link rel="stylesheet" href="cliente/src/estilos.css">
+    <script src="cliente/src/asteroides.js"></script>    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
+    <script src="cliente/src/cliente.js"></script>
+    <script src="cliente/src/ini.js"></script> 
+</head>
+<body>
+    <div class="container bg1 text-center" id="cnt1">
+        <div id="cabecera"></div>
+    </div>
+    <div class="container bg1 text-center" id="cnt2">
+        <div class="row">
+            <div class="col-sm-3">
+            </div>
+            <div class="col-sm-6">
+                <table class="table">
+                    <tr>
+                        <td>
+                            <div class="form-group" id="formSel">
+                              
+                              <select class="form-control" id="sel1">
+                              </select>
+                          </div>
+                      </td>
+                      <td>
+                          <button type="button" class="btn btn-primary btn-block" id="unirmeBtn">Unirme a partida</button>
+                    </td>
+                </tr>
+                <tr>
+                   <div id="partida"></div>
+                </tr>
+            </table>
+                </div>
+            </div>
+            <div class="col-sm-3">
+            </div>
+        </div>
+    </div>
+    <div class="container bg1" text-center>
+        <div id="espacio" align="center"></div>
+    </div>
+	<script type="text/javascript">
+		nombrePartida();
+        obtenerPartidas();
+	</script>
+</body>
+</html>
