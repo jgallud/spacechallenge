@@ -118,8 +118,7 @@ function Persistencia(){
 
     this.conectar=function(callback){
         var pers=this;
-        mongo.connect("mongodb://jag:jag@ds159845.mlab.com:59845/spacechallenge", function(err, db) {
-        //mongo.connect("mongodb://127.0.0.1:27017/usuarioscn", function(err, db) {    
+        mongo.connect("mongodb://tu-url-mongo", function(err, db) {          
             if (err){
                 console.log("No pudo conectar a la base de datos")
             }
