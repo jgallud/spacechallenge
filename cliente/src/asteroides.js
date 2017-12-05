@@ -13,6 +13,7 @@ function Juego(){
        game.load.image('space', 'cliente/recursos/deep-space.jpg');
        game.load.image('bullet', 'cliente/recursos/bullets.png');
        game.load.image('ship', 'cliente/recursos/ship.png');
+       game.load.image('ship2', 'cliente/recursos/ship2.png');
        //game.load.spritesheet('veggies', 'cliente/recursos/fruitnveg32wh37.png', 32, 32);
        game.load.spritesheet('veggies', 'cliente/recursos/pokemon.png', 96, 96);
        game.load.bitmapFont('carrier_command', 'cliente/recursos/carrier_command.png', 'cliente/recursos/carrier_command.xml');
@@ -35,12 +36,12 @@ function Juego(){
         
         game.add.tileSprite(0, 0, game.width, game.height, 'space');
         
-        this.marcador = game.add.text(game.world.centerX, 25, "Partida: "+cliente.room+" | Yo: 0 - Rival: 0", {
-                font: "25px Arial",
+        this.marcador = game.add.text(25, 25, "Partida: "+cliente.nombre, {
+                font: "20px Arial",
                 fill: "#FDFEFE",
-                align: "center"
+                align: "left"
             });
-        this.marcador.anchor.setTo(0.5, 0.5);      
+        //this.marcador.anchor.setTo(0.5, 0.5);      
 
         this.text = game.add.text(game.world.centerX, 300, "SpaceChallenge", {
                 font: "90px Arial Black",
@@ -94,7 +95,13 @@ function Juego(){
         this.text.destroy();
     }
     this.actualizarMarcador=function(){
-        this.marcador.setText("Partida: "+cliente.room+" | Yo:" +this.naveLocal.puntos + "- Rival:"+this.rival.puntos);
+        //this.marcador.setText("Partida: "+cliente.room+" | Yo:" +this.naveLocal.puntos + "- Rival:"+this.rival.puntos);
+        var cadena="";
+        //var ju=this;
+        for(var jug in this.naves){
+                cadena=cadena+this.naves[jug].email+": "+this.naves[jug].puntos+" ";
+            };
+        this.marcador.setText(cadena);
         game.world.bringToTop(this.marcador);
     }
     this.collisionHandler=function(bullet, veg) {
@@ -105,12 +112,14 @@ function Juego(){
                 this.naves[cliente.id].puntos++;                
                 //return true;
         }        
+        this.actualizarMarcador();
     }
    this.rivalHandler=function(bullet, veg) {      
         if (veg.frame==this.rival.veg){
             console.log("colision rival");
             veg.kill(); 
         }  
+        //this.actualizarMarcador();
     }
     this.processHandler=function(player, veg) {        
         return true;
@@ -122,8 +131,8 @@ function Juego(){
     }
 
     this.faltaUno=function(){
-        this.marcador.setText("Partida: "+cliente.room+" | Yo:0 - Rival:0 \n --- Esperando rival ---");
-        this.marcador.anchor.setTo(0.5, 0);
+        this.marcador.setText("Esperando rival...");
+        //this.marcador.anchor.setTo(0.5, 0);
         game.world.bringToTop(this.marcador);
     }
     this.update=function() {
@@ -139,9 +148,11 @@ function Juego(){
                 {
                     console.log('boom');                    
                 }
-                if (game.physics.arcade.collide(this.rival.sprite, this.veggies, this.collisionHandler,this.rivalHandler, this))
-                {
-                    console.log('boom');                    
+                if (cliente.num>1){
+                    if (game.physics.arcade.collide(this.rival.sprite, this.veggies, this.collisionHandler,this.rivalHandler, this))
+                    {
+                        console.log('boom');                    
+                    }
                 }
 
                 //game.physics.arcade.overlap(nave, this.veggies, this.collisionHandler, null, this);
@@ -150,7 +161,7 @@ function Juego(){
                     nave.sprite.rotation = targetAngle;
                     nave.mover(game.input.activePointer.x,game.input.activePointer.y,targetAngle);//nave.sprite.body.angularVelocity);            
                 }
-                this.actualizarMarcador();
+                
                 // if (game.input.pointer1.isDown){
                 //     var targetAngle = game.math.angleBetween(nave.sprite.x, nave.sprite.y,game.input.activePointer.x, game.input.activePointer.y);  nave.sprite.rotation = targetAngle;
                 //     this.moverNave(id,game.input.pointer1.x,game.input.pointer1.y,nave.sprite.body.angularVelocity);   
@@ -193,16 +204,18 @@ function Juego(){
                 this.faltaUno();
         }
     }
-
-    this.agregarJugador = function(id,x,y,veg){
-        console.log("nuevo usuario");
-        var nave=new Nave(id,x,y,veg);
-        this.naves[id]=nave;
-        if (id==cliente.id){
-            this.naveLocal=this.naves[cliente.id];
-        }
-        else{
-            this.rival=nave;
+    this.agregarJugador = function(data){
+        //console.log("nuevo usuario");
+        if (this.naves[data.id]==null){
+            var nave=new Nave(data);
+            this.naves[data.id]=nave;
+            if (data.id==cliente.id){
+                this.naveLocal=this.naves[cliente.id];
+                this.naveLocal.email=cliente.email.substr(0,cliente.email.indexOf('@'));
+            }
+            else{
+                this.rival=nave;
+            }
         }
     }
     this.moverNave=function(data){        
@@ -213,7 +226,7 @@ function Juego(){
         this.actualizarMarcador();
     }
     this.volverAJugar=function(data){
-        cliente.reset();
+        //cliente.reset();
         this.fin=false;
         this.naves={};
         this.naveLocal=null;
@@ -298,13 +311,15 @@ function FinJuego(){
     }
 }
 
-function Nave(id,x,y,veg){
-    this.id=id;
-    this.x=x;
-    this.y=y;
+function Nave(data){
+    this.id=data.id;
+    this.x=data.x;
+    this.y=data.y;
     this.destX;
     this.destY;
-    this.veg=veg;
+    this.veg=data.veg;
+    this.ship=data.ship;
+    this.email;
     this.puntos=0;
     this.sprite;
     this.bullets;
@@ -357,7 +372,7 @@ function Nave(id,x,y,veg){
         this.bullets.setAll('anchor.y', 0.5);
 
         //  Our player ship
-        this.sprite = game.add.sprite(this.x, this.y, 'ship');
+        this.sprite = game.add.sprite(this.x, this.y, this.ship);
         this.sprite.anchor.set(0.5);
 
         //  and its physics settings

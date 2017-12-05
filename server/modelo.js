@@ -1,11 +1,105 @@
+var persistencia=require("./persistencia.js");
+var cf=require("./cifrado.js");
+var moduloEmail=require("./email.js");
+var _ = require("underscore");
+var ObjectID=require("mongodb").ObjectID;
+
 function Juego(){
 	this.partidas={};
-	this.nuevaPartida=function(nombre,socket){
-		if (this.partidas[nombre]==null){
-		//	socket.join(nombre);
-			this.partidas[nombre]=new Partida(nombre);
+	this.usuarios={};
+	this.persistencia=new persistencia.Persistencia();
+	this.obtenerUsuario=function(id){
+		return _.find(this.usuarios,function(usu){
+			return usu._id==id
+		});
+	}
+	this.iniciarSesion=function(email,pass,callback){
+		var ju=this;
+		var passCifrada=cf.encrypt(pass);
+	    this.persistencia.encontrarUsuarioCriterio({email:email,pass:passCifrada,confirmada:true},function(usr){
+		    if (!usr){
+	            callback({'email':''});
+	        }
+	        else{
+	        	ju.usuarios[usr._id]=usr;	        	
+	            callback(usr);
+	        }
+	    });
+	}
+	this.registrarUsuario=function(email,pass,callback){
+		var ju=this;
+		var passCifrada=cf.encrypt(pass);
+		var key=(new Date().valueOf()).toString();
+		this.persistencia.encontrarUsuarioCriterio({email:email},function(usr){
+			if(!usr){
+				ju.persistencia.insertarUsuario({email:email,pass:passCifrada,key:key,confirmada:false},function(usu){
+	                callback({email:'ok'});
+	                moduloEmail.enviarEmail(usu.email,usu.key,"Confirme su correo en este enlace: ");
+	            });
+	        }
+	        else{
+	        	callback({email:undefined});
+	        }
+    	});
+	}
+	this.confirmarUsuario=function(email,key,callback){
+		var pers=this.persistencia;
+		this.persistencia.confirmarCuenta(email,key,function(usr){
+        if (!usr){
+            //console.log("El usuario no existe");
+            //response.send("<h1>La cuenta ya esta activada</h1>");
+            callback(undefined);
+        }
+        else{
+        	usr.confirmada=true;
+        	pers.modificarColeccionUsuarios(usr,function(result){
+        		callback(usr);
+        	});
+        }
+    	});
+	}
+	this.obtenerKeyUsuario=function(email,adminKey,callback){
+		if (adminKey=="tu-clave-admin")
+	    {
+	        this.persistencia.encontrarUsuarioCriterio({email:email},function(usr){
+	            if (!usr){
+	                callback({key:""});
+	            }
+	            else{
+	                callback({key:usr.key});
+	            }
+	        });
+	    }
+	    else
+	    {
+	        callback({key:""});
+	    }
+	}
+	this.eliminarUsuario=function(uid,callback){
+		var json={'resultados':-1};
+		if (ObjectID.isValid(uid)){
+			this.persistencia.eliminarUsuario(uid,function(result){
+	            if (result.result.n==0){
+	                console.log("No se pudo eliminar de usuarios");
+	            }
+	            else{
+	                json={"resultados":1};
+	                console.log("Usuario eliminado de usuarios");
+	                callback(json);
+	            }
+	        }); 
 		}
-		socket.join(nombre);
+	    else{
+	    	callback(json);
+	    }
+	}
+	this.nuevaPartida=function(id,nombre,num,socket){
+		if (this.usuarios[id]!=null){
+			if (this.partidas[nombre]==null){
+				this.partidas[nombre]=new Partida(nombre,num);
+			}
+			socket.join(nombre);
+		}
 	}
 	this.unirme=function(nombre,socket){
 		socket.join(nombre);
@@ -19,13 +113,18 @@ function Juego(){
 		}
 		callback(lista);
 	}
+	this.persistencia.conectar(function(db){
+		console.log("conectado a la base de datos");
+	});
 }
 
-function Partida(nombre){
+function Partida(nombre,num){
 	this.jugadores={};
 	this.nombre=nombre;
 	this.estado=new Inicial();
 	this.veg;//randomInt(0,35);
+	this.numJugadores=num;
+	this.ship='ship';
 	this.x=200;
 	this.socket;
 	this.io;
@@ -41,11 +140,14 @@ function Partida(nombre){
 	}
 	this.puedeAgregarJugador=function(id){		
 		var y=20;
-		this.jugadores[id]=new Jugador(id,this.x,y,this.veg);
-		this.veg++;
-		this.x=600;
+		if (this.jugadores[id]==null){
+			this.jugadores[id]=new Jugador(id,this.x,y,this.veg,this.ship);
+			this.veg++;
+			this.ship='ship2';
+			this.x=600;
+		}
 		console.log(this.jugadores);
-		if (Object.keys(this.jugadores).length>=2){
+		if (Object.keys(this.jugadores).length>=this.numJugadores){
 			this.estado=new Jugar();
 			this.enviarAJugar();
 		}
@@ -60,7 +162,7 @@ function Partida(nombre){
 		//this.socket.broadcast.emit('aJugar',this.jugadores);
 		//this.socket.emit('aJugar',this.jugadores);
 		this.io.sockets.in(this.nombre).emit('aJugar',this.jugadores);
-		this.socket.broadcast.to(this.nombre).emit('aJugar',this.jugadores)
+		//this.socket.broadcast.to(this.nombre).emit('aJugar',this.jugadores)
 	}
 	this.enviarFinal=function(idGanador){
 		//this.socket.broadcast.emit('final',idGanador);
@@ -93,6 +195,7 @@ function Partida(nombre){
 		this.jugadores={};
 		this.coord=[];
 		this.x=200;
+		this.ship="ship";
 		this.ini();
 		this.estado=new Inicial();
 		this.io.sockets.in(this.nombre).emit('reset',this.coord);
@@ -174,12 +277,15 @@ function Final(){
 	}
 }
 
-function Jugador(id,x,y,veg){
+function Jugador(id,x,y,veg,ship){
 	this.id=id;
     this.x=x;//randomInt(100,400),
 	this.y=y;//randomInt(100,400),
     this.veg=veg;
+    this.ship=ship;
+    this.email;
 }
+
 
 function randomInt(low, high){
    	return Math.floor(Math.random() * (high - low) + low);

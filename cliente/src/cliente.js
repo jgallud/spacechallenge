@@ -1,51 +1,50 @@
-function Cliente(cadena){
+function Cliente(id,email){
 	this.socket;
-	this.id=null;
+	this.id=id;
 	this.veg;
-	this.coord;
-	this.room=cadena;
+	this.num;
+	this.email=email;
+	//this.coord;
+	this.nombre;
 	this.cargarConfiguracion=function(){
-		this.socket.emit('configuracion',this.room);
+		this.socket.emit('configuracion',this.nombre);
 	}
 	this.unirmeAPartida = function(){		
-    	this.socket.emit('unirme',this.room);
+    	this.socket.emit('unirme',this.nombre);
 	};
 	this.askNewPlayer = function(){		
-    	this.socket.emit('nuevoJugador',{room:this.room,id:this.id});
+    	this.socket.emit('nuevoJugador',{room:this.nombre,id:this.id});
 	};
-	this.ini=function(){
+	this.ini=function(nombre,num){
 		this.socket=io.connect();
-		this.id=randomInt(1,10000);		
+		this.nombre=nombre;
+		this.num=num;
+		//this.id=randomInt(1,10000);		
 		this.lanzarSocketSrv();
 	}
 	this.reset=function(){
 		this.id=randomInt(1,10000);
 	};
 	this.enviarPosicion=function(x,y,ang,puntos){
-		this.socket.emit('posicion',this.room,{"id":this.id,"x":x,"y":y,"ang":ang,"puntos":puntos})
+		this.socket.emit('posicion',this.nombre,{"id":this.id,"x":x,"y":y,"ang":ang,"puntos":puntos})
 	}
 	this.sendClick = function(x,y){
   		this.socket.emit('click',{x:x,y:y});
 	};
 	this.volverAJugar=function(){
-		this.socket.emit('volverAJugar',this.room);	
+		this.socket.emit('volverAJugar',this.nombre);	
 	}
 	this.lanzarSocketSrv=function(){
 		var cli=this;
 		this.socket.on('connect', function() {   			
-   			cli.socket.emit('room', cli.room);
+   			cli.socket.emit('room', cli.id,cli.nombre,cli.num);
    			console.log("envio room");
    			cli.cargarConfiguracion();
 		});
 		this.socket.on('coord',function(data){
-			this.coord=data;			
-			game.state.start('Game',true,false,this.coord);
+			//this.coord=data;			
+			game.state.start('Game',true,false,data);
 		});
-		// this.socket.on('nuevoJugador',function(data){	
-		// 	//client.id=data.id;
-		// 	this.veg=data.veg;
-	 //    	juego.agregarJugador(data.id,data.x,data.y,data.veg);        
-		// });
 		this.socket.on('faltaUno',function(data){
 			console.log('falta uno');
 			juego.faltaUno();
@@ -55,7 +54,7 @@ function Cliente(cadena){
 		    	//client.id=data[i].id;
 		    for(var jug in data){
 		    	console.log('aJugar: ',data[jug]);
-		        juego.agregarJugador(data[jug].id,data[jug].x,data[jug].y,data[jug].veg);
+		        juego.agregarJugador(data[jug]);
 		    };
 		});
 		this.socket.on('final',function(data){		    
@@ -79,7 +78,7 @@ function Cliente(cadena){
 		    //juego.moverNave(data.id,data.x,data.y,data.ang);        
 		});
 	}
-	this.ini();
+	//this.ini();
 }
 
 

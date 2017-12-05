@@ -4,8 +4,12 @@
   "description": "veggierocket",
   "main": "index.js",
   "dependencies": {
+    "body-parser": "^1.18.2",
     "express": "^4.15.4",
-    "socket.io": "^2.0.3"
+    "mongodb": "^2.2.33",
+    "sendgrid": "^1.9.2",
+    "socket.io": "^2.0.3",
+    "underscore": "^1.8.3"
   },
   "devDependencies": {},
   "scripts": {
