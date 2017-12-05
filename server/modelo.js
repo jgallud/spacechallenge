@@ -59,7 +59,7 @@ function Juego(){
     	});
 	}
 	this.obtenerKeyUsuario=function(email,adminKey,callback){
-		if (adminKey=="tu-clave-admin")
+		if (adminKey=="tu-clave-root")
 	    {
 	        this.persistencia.encontrarUsuarioCriterio({email:email},function(usr){
 	            if (!usr){
@@ -74,6 +74,25 @@ function Juego(){
 	    {
 	        callback({key:""});
 	    }
+	}
+	this.actualizarUsuario=function(nuevo,callback){
+		//this.comprobarCambios(nuevo);
+		//var usu=this;
+		var oldC=cf.encrypt(nuevo.oldpass);
+		var newC=cf.encrypt(nuevo.newpass);
+		var pers=this.persistencia;
+		this.persistencia.encontrarUsuarioCriterio({email:nuevo.email,pass:oldC},function(usr){
+			if(usr){
+				usr.pass=newC;
+		        pers.modificarColeccionUsuarios(usr,function(nusu){
+		               console.log("Usuario modificado");
+		               callback(usr);
+		        });
+		    }
+		    else{
+		    	callback({email:undefined});	
+		    }
+		});
 	}
 	this.eliminarUsuario=function(uid,callback){
 		var json={'resultados':-1};

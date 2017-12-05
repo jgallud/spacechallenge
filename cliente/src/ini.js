@@ -1,17 +1,8 @@
 var game;
 var juego;
 var finJuego;
-
-// var game = new Phaser.Game(800, 600, Phaser.CANVAS, 'espacio');
-
-// var juego=new Juego();
-// var finJuego=new FinJuego();
-
-// game.state.add('Game',juego);
-// game.state.add("FinJuego",finJuego);
-//game.state.start('Game');
-
-var cliente;//=new Cliente();
+var cliente;
+var com;
 
 function borrar(){
 	$("#cnt1").remove();
@@ -93,14 +84,9 @@ function mostrarCanvas(){
 function mostrarIniciarPartida(usr){
 	cliente=new Cliente(usr._id,usr.email);
     nombrePartida();
-    obtenerPartidas();
+    com.obtenerPartidas();
 }
 
-function obtenerPartidas(){
-  $.getJSON("/obtenerPartidas",function(data){    
-        //console.log(data);       
-        listaPartidas(data);
-  });
-}
+
 
 
