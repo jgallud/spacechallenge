@@ -25,8 +25,8 @@ function Cliente(id,email){
 	this.reset=function(){
 		this.id=randomInt(1,10000);
 	};
-	this.enviarPosicion=function(x,y,ang,puntos){
-		this.socket.emit('posicion',this.nombre,{"id":this.id,"x":x,"y":y,"ang":ang,"puntos":puntos})
+	this.enviarPosicion=function(x,y,ang,puntos,tiempo){
+		this.socket.emit('posicion',this.nombre,{"id":this.id,"x":x,"y":y,"ang":ang,"puntos":puntos,"tiempo":tiempo});
 	}
 	this.sendClick = function(x,y){
   		this.socket.emit('click',{x:x,y:y});

@@ -7,7 +7,12 @@ var server = require('http').Server(app);
 var io = require('socket.io').listen(server);
 
 var modelo=require('./server/modelo.js');
-var juego=new modelo.Juego();
+var comSrv=require('./server/comSrv.js');
+var com=new comSrv.ComSrv();
+var juego=new modelo.Juego(com);
+juego.conectar(function(mens){
+    console.log(mens);
+});
 
 app.set('port', (process.env.PORT || 5000));
 
@@ -94,34 +99,20 @@ app.delete("/eliminarUsuario/:uid",function(request,response){
     });
 });
 
+app.put("/actualizarUsuario",function(request,response){
+    juego.actualizarUsuario(request.body,function(result){
+            response.send(result);
+        });
+});
+
+app.get('/obtenerResultados', function(request, response) {
+    juego.obtenerResultados(function(lista){
+        response.send(lista);        
+    });
+});
+
 server.listen(app.get('port'), function() {
   console.log('Node app is running on port', app.get('port'));
 });
 
-io.on('connection',function(socket){
-    socket.on('room', function(id,room,num) {
-        console.log('nuevo cliente: ',id,room,num);
-        juego.nuevaPartida(id,room,num,socket);
-    });
-    socket.on('unirme',function(room){
-        //console.log(juego.partidas);
-        juego.unirme(room,socket);
-    })
-    socket.on('configuracion',function(room){
-        //console.log(juego.partidas);
-        if (juego.partidas[room]){
-            juego.partidas[room].iniciar(socket,io);
-        }
-    })
-    socket.on('nuevoJugador',function(data){        
-        juego.partidas[data.room].agregarJugador(data.id,socket);
-    });
-    socket.on('posicion',function(room,data){
-       juego.partidas[room].movimiento(data,socket);
-    });
-    socket.on('volverAJugar',function(room){
-        //juego=new modelo.Juego();
-        juego.partidas[room].volverAJugar(socket);
-    });
-
-});
+com.lanzarSocketSrv(io,juego);

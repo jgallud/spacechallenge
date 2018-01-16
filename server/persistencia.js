@@ -7,17 +7,20 @@ var ObjectID=require("mongodb").ObjectID;
 function Persistencia(){
     this.usuariosCol=undefined;
     this.resultadosCol=undefined;
+    this.db;
 
     this.encontrarUsuario=function(email,callback){
         encontrar(this.usuariosCol,{email:email},callback);
     };
 
     this.encontrarUsuarioCriterio=function(criterio,callback){
-        encontrar(this.usuariosCol,criterio,callback);
+        var col=this.usuariosCol;
+        encontrar(col,criterio,callback);
     };
 
     this.encontrarResultadosCriterio=function(criterio,callback){
-        encontrar(this.resultadosCol,criterio,callback);
+        var col=this.resultadosCol;
+        encontrar(col,criterio,callback);
     };
 
     this.encontrarTodosResultados=function(callback){
@@ -74,31 +77,23 @@ function Persistencia(){
 
 
     this.insertarUsuario=function(usu,callback){
-        insertarUsuario(this.usuariosCol,usu,callback);
+        insertar(this.usuariosCol,usu,callback);
     }
 
     this.insertarResultado=function(resu,callback){
-        insertarUsuario(this.resultadosCol,resu,callback);
+        insertar(this.resultadosCol,resu,callback);
     }
 
-    function insertarUsuario(coleccion,usu,callback){
+    function insertar(coleccion,usu,callback){
         coleccion.insert(usu,function(err,result){
             if(err){
                 console.log("error");
             }
             else{
-                console.log("Nuevo usuario creado: "+usu.email);
-                callback(usu);
-                /*
-                juego.agregarUsuario(usu);
-                //response.send("<h1>Conquista Niveles: Cuenta confirmada</h1>");                
-                response.redirect("/");
-                */
+                callback(usu);                
             }
         });
     }
-
-    //module.exports.insertarUsuario=insertarUsuario;
 
     this.eliminarUsuario=function(uid,callback){
         eliminar(this.usuariosCol,{_id:ObjectID(uid)},callback);
@@ -114,16 +109,15 @@ function Persistencia(){
         });
     }
 
-//module.exports.eliminar=eliminar;
-
     this.conectar=function(callback){
         var pers=this;
-        mongo.connect("mongodb://tu-url-mongo", function(err, db) {          
+        mongo.connect("mongodb://mlab-url", function(err, db) {
             if (err){
                 console.log("No pudo conectar a la base de datos")
             }
             else{
-                console.log("conectado a Mongo: usuarioscn");
+                console.log("conectado a Mongo MLab");
+                pers.db=db;
                 db.collection("usuarios",function(err,col){
                     if (err){
                         console.log("No pude obtener la coleccion")
@@ -148,6 +142,9 @@ function Persistencia(){
                 callback(db);
             }
         });
+    }
+    this.cerrar=function(){
+        this.db.close();
     }
 
 }

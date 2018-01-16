@@ -4,10 +4,11 @@ var moduloEmail=require("./email.js");
 var _ = require("underscore");
 var ObjectID=require("mongodb").ObjectID;
 
-function Juego(){
+function Juego(com){
 	this.partidas={};
 	this.usuarios={};
 	this.persistencia=new persistencia.Persistencia();
+	this.com=com;
 	this.obtenerUsuario=function(id){
 		return _.find(this.usuarios,function(usu){
 			return usu._id==id
@@ -30,11 +31,11 @@ function Juego(){
 		var ju=this;
 		var passCifrada=cf.encrypt(pass);
 		var key=(new Date().valueOf()).toString();
-		this.persistencia.encontrarUsuarioCriterio({email:email},function(usr){
+		ju.persistencia.encontrarUsuarioCriterio({email:email},function(usr){
 			if(!usr){
-				ju.persistencia.insertarUsuario({email:email,pass:passCifrada,key:key,confirmada:false},function(usu){
-	                callback({email:'ok'});
+				ju.persistencia.insertarUsuario({email:email,pass:passCifrada,key:key,confirmada:false},function(usu){	                
 	                moduloEmail.enviarEmail(usu.email,usu.key,"Confirme su correo en este enlace: ");
+	                callback({email:'ok'});
 	            });
 	        }
 	        else{
@@ -46,8 +47,6 @@ function Juego(){
 		var pers=this.persistencia;
 		this.persistencia.confirmarCuenta(email,key,function(usr){
         if (!usr){
-            //console.log("El usuario no existe");
-            //response.send("<h1>La cuenta ya esta activada</h1>");
             callback(undefined);
         }
         else{
@@ -59,7 +58,7 @@ function Juego(){
     	});
 	}
 	this.obtenerKeyUsuario=function(email,adminKey,callback){
-		if (adminKey=="tu-clave-root")
+		if (adminKey=="tu-clave-admin")
 	    {
 	        this.persistencia.encontrarUsuarioCriterio({email:email},function(usr){
 	            if (!usr){
@@ -112,16 +111,18 @@ function Juego(){
 	    	callback(json);
 	    }
 	}
-	this.nuevaPartida=function(id,nombre,num,socket){
+	this.nuevaPartida=function(id,nombre,num,callback){
 		if (this.usuarios[id]!=null){
 			if (this.partidas[nombre]==null){
-				this.partidas[nombre]=new Partida(nombre,num);
+				this.partidas[nombre]=new Partida(nombre,num,this);
 			}
-			socket.join(nombre);
+			callback(nombre);
+			//socket.join(nombre);
 		}
 	}
-	this.unirme=function(nombre,socket){
-		socket.join(nombre);
+	this.unirme=function(nombre,callback){
+		callback(nombre);
+		//socket.join(nombre);
 	}
 	this.obtenerPartidas=function(callback){
 		var lista=[];
@@ -132,12 +133,32 @@ function Juego(){
 		}
 		callback(lista);
 	}
-	this.persistencia.conectar(function(db){
-		console.log("conectado a la base de datos");
-	});
+	this.agregarResultado=function(data){
+		//buscar el email de data.id
+		this.persistencia.insertarResultado(data,function(res){
+			console.log("Resultado insertado");
+		});
+	}
+	this.obtenerResultados=function(callback){
+		this.persistencia.encontrarTodosResultados(function(res){
+			callback(res);
+		});
+	}
+	this.conectar=function(callback){
+		this.persistencia.conectar(function(){
+			callback("conectado a la base de datos");
+		});
+	}
+	this.cerrar=function(){
+		this.persistencia.cerrar();
+	}
+	// this.conectar(function(mens){
+	// 	console.log(mens);
+	// });
 }
 
-function Partida(nombre,num){
+function Partida(nombre,num,juego){
+	this.juego=juego;
 	this.jugadores={};
 	this.nombre=nombre;
 	this.estado=new Inicial();
@@ -145,16 +166,20 @@ function Partida(nombre,num){
 	this.numJugadores=num;
 	this.ship='ship';
 	this.x=200;
+	this.numeroFrutas=5;
 	this.socket;
+	this.callback;
 	this.io;
 	this.coord=[];
-	this.iniciar=function(socket,io){
-		this.socket=socket;
-		this.io=io;
-		this.socket.emit('coord',this.coord);
+	this.iniciar=function(callback){
+		//this.socket=socket;
+		//this.io=io;
+		//this.socket.emit('coord',this.coord);
+		callback('coord',this.coord);
 	}
-	this.agregarJugador=function(id,socket){
-		this.socket=socket;
+	this.agregarJugador=function(id,callback){
+		//this.socket=socket;
+		this.callback=callback;
 		this.estado.agregarJugador(id,this);
 	}
 	this.puedeAgregarJugador=function(id){		
@@ -174,37 +199,30 @@ function Partida(nombre,num){
 			this.enviarFaltaUno();
 	}
 	this.enviarFaltaUno=function(){
-		//this.socket.emit('faltaUno');
-		this.io.sockets.in(this.nombre).emit('faltaUno');
+		this.callback('faltaUno',null);
 	}
 	this.enviarAJugar=function(){
-		//this.socket.broadcast.emit('aJugar',this.jugadores);
-		//this.socket.emit('aJugar',this.jugadores);
-		this.io.sockets.in(this.nombre).emit('aJugar',this.jugadores);
-		//this.socket.broadcast.to(this.nombre).emit('aJugar',this.jugadores)
+		this.callback('aJugar',this.jugadores);
 	}
 	this.enviarFinal=function(idGanador){
-		//this.socket.broadcast.emit('final',idGanador);
-		//this.socket.emit('final',idGanador);
-		this.io.sockets.in(this.nombre).emit('final',idGanador);
-		this.socket.broadcast.to(this.nombre).emit('final',idGanador)	
+		this.callback('final',idGanador);
 	}
-	this.movimiento=function(data,socket){
-		this.socket=socket;
+	this.movimiento=function(data,callback){
+		this.callback=callback;
 		this.estado.movimiento(data,this);
 	}
 	this.puedeMover=function(data){
-		if (data.puntos>=10){
+		if (data.puntos>=this.numeroFrutas){
 			this.estado=new Final();
 			this.enviarFinal(data.id);
+			this.juego.agregarResultado({"usuario":data.id,"nivel":this.numeroFrutas,"tiempo":data.tiempo});
 		}
 		else{
-			//this.socket.broadcast.emit('movimiento',data);
-			this.socket.broadcast.to(this.nombre).emit('movimiento',data)
+			this.callback('movimiento',data);
 		}
 	}
-	this.volverAJugar=function(socket){
-		this.socket=socket;
+	this.volverAJugar=function(callback){
+		this.callback=callback;
 		this.estado.volverAJugar(this);
 	}
 	this.reset=function(){
@@ -217,27 +235,21 @@ function Partida(nombre,num){
 		this.ship="ship";
 		this.ini();
 		this.estado=new Inicial();
-		this.io.sockets.in(this.nombre).emit('reset',this.coord);
-		this.socket.broadcast.to(this.nombre).emit('reset',this.coord)
-		//this.socket.broadcast.emit('reset',this.coord);
-        //this.socket.emit('reset',this.coord);
-	
+		this.callback('reset',this.coord);
 	}
 	this.ini=function(){
-		this.veg=randomInt(0,24);
+		this.veg=randomInt(0,36); //24
 		var otra=this.veg+1;
-
-		//console.log(this.veg,"--",otra);
-		for(var i=0;i<10;i++){
+		for(var i=0;i<this.numeroFrutas;i++){
 			this.coord.push({'veg':this.veg,'x':randomInt(10,720),'y':randomInt(25,520)});
 		}
-		for(var i=0;i<10;i++){
+		for(var i=0;i<this.numeroFrutas;i++){
 			this.coord.push({'veg':otra,'x':randomInt(10,720),'y':randomInt(25,520)});
 		}
 		var alea;
-		for(var i=0;i<30;i++){
+		for(var i=0;i<50;i++){
 			do {
-				alea=randomInt(0,25);
+				alea=randomInt(0,37);
 			}while(alea==this.veg || alea==otra)
 			this.coord.push({'veg':alea,'x':randomInt(10,720),'y':randomInt(25,520)});
 		}
@@ -266,6 +278,9 @@ function Inicial(){
 function Jugar(){
 	this.esInicial=function(){
 		return false;
+	}
+	this.esJugar=function(){
+		return true;
 	}
 	this.agregarJugador=function(id,juego){
 		console.log('No se puede agregar nuevo jugador');

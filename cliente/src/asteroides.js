@@ -9,13 +9,15 @@ function Juego(){
     this.rival;
     this.text;
     this.coord;
+    this.contadorTxt;
+    this.contador=0;
     this.preload=function() {
        game.load.image('space', 'cliente/recursos/deep-space.jpg');
        game.load.image('bullet', 'cliente/recursos/bullets.png');
        game.load.image('ship', 'cliente/recursos/ship.png');
        game.load.image('ship2', 'cliente/recursos/ship2.png');
-       //game.load.spritesheet('veggies', 'cliente/recursos/fruitnveg32wh37.png', 32, 32);
-       game.load.spritesheet('veggies', 'cliente/recursos/pokemon.png', 96, 96);
+       game.load.spritesheet('veggies', 'cliente/recursos/fruitnveg32wh37.png', 32, 32);
+       //game.load.spritesheet('veggies', 'cliente/recursos/pokemon.png', 96, 96);
        game.load.bitmapFont('carrier_command', 'cliente/recursos/carrier_command.png', 'cliente/recursos/carrier_command.xml');
        game.load.image("play","cliente/recursos/reset.png");
     }
@@ -52,7 +54,11 @@ function Juego(){
         this.text.anchor.x = 0.5;
         this.text.anchor.y = 0.5;  
 
-        game.input.onDown.addOnce(this.eliminarText, this);        
+        game.input.onDown.addOnce(this.eliminarText, this);    
+
+        this.contadorTxt = game.add.text(game.width-70, 30, 'Tiempo: 0', { font: "20px Arial", fill: "#ffffff", align: "right" });
+        this.contadorTxt.anchor.setTo(0.5, 0.5);    
+                
 
         this.veggies = game.add.physicsGroup();        
 
@@ -60,36 +66,20 @@ function Juego(){
             var c = this.veggies.create(this.coord[i].x, this.coord[i].y, 'veggies', this.coord[i].veg);
         }
 
-        // for (var i = 0; i < 50; i++)
-        // {
-        //     var c = this.veggies.create(game.rnd.between(10, 770), game.rnd.between(25, 570), 'veggies', game.rnd.between(0, 15));
-        //     c.body.mass = -100;
-        // }
-
-        // for (var i = 0; i < 50; i++)
-        // {
-        //     var c = this.veggies.create(game.rnd.between(10, 770), game.rnd.between(25, 570), 'veggies', game.rnd.between(18, 35));
-        //     c.body.mass = -100;
-        // }
-
-        // for (var i = 0; i < 20; i++)
-        // {
-        //     var c = this.veggies.create(game.rnd.between(10, 770), game.rnd.between(25, 570), 'veggies', 17);
-        // }
-
-        // for (var i = 0; i < 20; i++)
-        // {
-        //     var c = this.veggies.create(game.rnd.between(10, 770), game.rnd.between(25, 570), 'veggies', 16);
-        // }
-        
-        //cliente.reset();
-
         //  Game input
         this.cursors = game.input.keyboard.createCursorKeys();
         game.input.keyboard.addKeyCapture([ Phaser.Keyboard.SPACEBAR ]);
         //game.input.addPointer();
         game.world.bringToTop(this.text);
         cliente.askNewPlayer();
+    }
+    this.mostrarObjetivo=function(veg){
+        var objetivo=this.veggies.create(19,40,'veggies',veg);
+    }
+    this.actualizarContador=function(){
+        this.contador++;
+
+        this.contadorTxt.setText('Tiempo: ' + this.contador);
     }
     this.eliminarText=function(){
         this.text.destroy();
@@ -160,22 +150,7 @@ function Juego(){
                     var targetAngle = game.math.angleBetween(nave.sprite.x, nave.sprite.y,game.input.activePointer.x, game.input.activePointer.y);  
                     nave.sprite.rotation = targetAngle;
                     nave.mover(game.input.activePointer.x,game.input.activePointer.y,targetAngle);//nave.sprite.body.angularVelocity);            
-                }
-                
-                // if (game.input.pointer1.isDown){
-                //     var targetAngle = game.math.angleBetween(nave.sprite.x, nave.sprite.y,game.input.activePointer.x, game.input.activePointer.y);  nave.sprite.rotation = targetAngle;
-                //     this.moverNave(id,game.input.pointer1.x,game.input.pointer1.y,nave.sprite.body.angularVelocity);   
-                // }
-
-                 // if (this.cursors.up.isDown)
-                 // {
-                 //     game.physics.arcade.accelerationFromRotation(nave.sprite.rotation, 200, nave.sprite.body.acceleration);
-
-                 // }
-                 // else
-                 // {
-                 //     nave.sprite.body.acceleration.set(0);
-                 // }
+                }                
                 
 
                 if (this.cursors.left.isDown)
@@ -212,11 +187,13 @@ function Juego(){
             if (data.id==cliente.id){
                 this.naveLocal=this.naves[cliente.id];
                 this.naveLocal.email=cliente.email.substr(0,cliente.email.indexOf('@'));
+                this.mostrarObjetivo(data.veg);
             }
             else{
                 this.rival=nave;
             }
         }
+        game.time.events.loop(Phaser.Timer.SECOND, this.actualizarContador, this);
     }
     this.moverNave=function(data){        
         var nave=this.naves[data.id];
@@ -231,6 +208,7 @@ function Juego(){
         this.naves={};
         this.naveLocal=null;
         this.coord=[];
+        this.contador=0;
         game.state.start("Game",true,false,data);
     }
 
@@ -343,7 +321,7 @@ function Nave(data){
 
     }
     this.onComplete=function(){
-        cliente.enviarPosicion(this.sprite.x,this.sprite.y,this.sprite.rotation, this.puntos);
+        cliente.enviarPosicion(this.sprite.x,this.sprite.y,this.sprite.rotation, this.puntos,juego.contador);
     }
     this.disparar=function() {
 

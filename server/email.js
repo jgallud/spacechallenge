@@ -1,11 +1,12 @@
-var sendgrid = require("sendgrid")("tu-usuario","tu-clave");
+var sendgrid = require("sendgrid")("usr","key");
 
-var url="https://tu-url/";
+var url="https://spacechallenge.herokuapp.com/";
+//var url="http://localhost:5000/";
 
 module.exports.enviarEmail=function(direccion,key,msg){
 	var email = new sendgrid.Email();
 	email.addTo(direccion);
-	email.setFrom('tu-cuenta-de-email');
+	email.setFrom('tu-email');
 	email.setSubject('confirmar cuenta');
 	email.setHtml('<a href="'+url+'confirmarUsuario/'+direccion+'/'+key+'">'+msg+'</a>');
 
@@ -15,7 +16,7 @@ module.exports.enviarEmail=function(direccion,key,msg){
 module.exports.enviarEmailResetPassword=function(direccion,key,msg){
 	var email = new sendgrid.Email();
 	email.addTo(direccion);
-	email.setFrom('tu-cuenta-de-email');
+	email.setFrom('tu-email');
 	email.setSubject('Reiniciar clave');
 	email.setHtml('<a href="'+url+'cambiarClave/'+direccion+'/'+key+'">'+msg+'</a>');
 
